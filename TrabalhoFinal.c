@@ -1,128 +1,133 @@
-/* Multiplicacao de matriz-matriz de modo concorrente*/
-//Vamos modificar para virar nosso trab final
-#include<stdio.h>
-#include<stdlib.h>
-#include<pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <math.h>
 #include "timer.h"
 
+#define NUM_THREADS 3
+#define NUM_DOCUMENTS 3
+//#define ARCHIVE_PATH "src\\arquivo"
 
-vou cortar a maioria das coisas e deixar algumas ideias
+int n_docs_com_termo = 0;  //Em quantos documentos o termo aparece.
+int palavra_pos_global = 0;//Palavra lida
+int indice_arquivo = 0;    //Qual arquivo está sendo lido. 
 
-int nthreads; //numero de threads , podemos deixar fixo e mudar a cada execucao , sem pedir ao usuario
+pthread_mutex_t mutex;
 
+// FUNÇÕES AUXILIARES NO NOSSO TRABALHO
+double TF(int num_ocorrencias, int num_palavras);
+double IDF();
+
+/*
 typedef struct{
-   int id; //identificador do elemento que a thread ira processar
-   int inicio;
-   int fim;
-} tArgs;  //talvez seja interessante trabalhar com isso
+   int id;
+}tArgs;
+*/
+void *tarefa(void *arg) {
+    char buffer[256]; // Nenhuma linha é maior que 256 caracteres
 
-//precisamos criar aqui a funcao que cada thread vai executar
-void * tarefa(void *arg) { // ta recebendo como entrada nosso struc
-  
-   }
+    while (1) {
+        pthread_mutex_lock(&mutex);
+        int indice_local = indice_arquivo++; // Cada thread obtém um índice único
+        pthread_mutex_unlock(&mutex);
 
-//fluxo principal
-int main(int argc, char* argv[]) {
-   //consertar os prints
-   //saber quais variaveis declarar 
+        if (fseek(arquivo, indice_local * TAMANHO_LINHA, SEEK_SET) != 0) {
+            // Se o deslocamento não for possível, terminamos
+            break;
+        }
+
+        if (fgets(buffer, sizeof(buffer), arquivo) == NULL) {
+            // Verifique EOF
+            break;
+        }
+        
+        pthread_mutex_lock(&mutex);
+        if (indice_arquivo >= TOTAL_LINHAS) { // Condição para terminar todas as threads
+            break;
+        }
+        pthread_mutex_unlock(&mutex);
+    }
+    return NULL;
+}
+
+
+int main(int argc, char* argv[]){
+
+   /*Abre os arquivos*/
+   /*Quero abrir os arquivos de duas maneiras
    
-   long long int tamA,tamB; //qtde de elementos na matriz A e B
-   FILE * arqA, *arqB,*arqS; //descritor do arquivos de entrada e arquivo de saída
-   int tam = colunasA*linhasB;
-   size_t retA,retB,ret; //retorno da funcao de escrita no arquivo de saida
-   pthread_t *tid; //identificadores das threads no sistema
-   tArgs *args; //identificadores locais das threads e dimensao
-   double inicio, fim, delta;
-   GET_TIME(inicio);
-   //leitura e avaliacao dos parametros de entrada
-   if(argc<5) {
+      - Leitura de um src
+      - Através da linha de comando.
+    */
+
+    FILE *arquivo[NUM_DOCUMENTS];
+    FILE *output;
+
+    pthread_t tid[NUM_THREADS];
+
+
+    if(argc == 1){   //Abertura padrão, modo exemplo com acesso a src
+      int i = 0;
+      char nome_arquivo = ARCHIVE_PATH;
+      while(i<NUM_DOCUMENTS){
+         char caminho[50];
+         sprintf(caminho, "src\\arquivo_%d", i);
+         arquivo[i] = fopen(caminho, "r");
+
+         if(arquivo[i] == NULL){ //Caso o arquivo não abra.
+            printf("ERRO!! -- Impossível abrir arquivo_%d",i);
+            return 1;
+         }
+      }
+
+      
+
+    }
+    else if(argc<5){
       printf("Digite: %s <arquivos de entrada> <arquivo de entrada> <arquivo de entrada>  <arquivo de saída> \n", argv[0]);
       //consertar os prints
-      return 1;
+         return 2;
    }
-  
+   else{
+      int i = 0;
+      while(i<NUM_DOCUMENTS){
+         arquivo[i] = fopen(argv[i], "r");
 
-   //abre o arquivo para leitura txt de entrada do arquivo1
-   arqA = fopen(argv[1], "rb");
-   if(!arqA) {
-      fprintf(stderr, "Erro de abertura do arquivo\n");
-      return 2;
-   }
-   //abre o arquivo para leitura txt de entrada do arquivo2
-   arqB = fopen(argv[2], "rb");
-   if(!arqB) {
-      fprintf(stderr, "Erro de abertura do arquivo\n");
-      return 2;
-   }
-   //abre o arquivo para leitura txt de entrada do arquivo3
-
-    arqC = fopen(argv[3], "rb");
-   if(!arqC) {
-      fprintf(stderr, "Erro de abertura do arquivo\n");
-      return 2;
-   }
-
-
-
-   //Precisamos ler arquivo 1
-  
-   //Precisamos ler arquivo 2
-
-   //Precisamos ler arquivo 3
-
-
-   precisamos terminar tempo de processamento
-  
-
-   //vai chamar as threads para chamarem a tarefa da thread
-   
-   GET_TIME(inicio); // incia tempo de processamento
-   //alocacao das estruturas que vamos ultilizar
-   tid = (pthread_t*) malloc(sizeof(pthread_t)*nthreads);
-   if(tid==NULL) {puts("ERRO--malloc"); return 2;}   // vamos deixar?
-   args = (tArgs*) malloc(sizeof(tArgs)*nthreads);
-   if(args==NULL) {puts("ERRO--malloc"); return 2;}
-    
-   //criacao das threads, vamos ver como vamos fazer a criacao das nossas threads
-    for (int i = 0; i < nthreads; i++) {
-        (args + i)->id = i;
-        (args + i)->inicio = i * pedaco;
-        (args + i)->fim = (i + 1) * pedaco;
-        if (i == nthreads - 1) {
-            (args + i)->fim = linhasA;
-        }
-
-        if (pthread_create(tid + i, NULL, mult, (void*)(args + i))) {
-            puts("ERRO--pthread_create");
+         if(arquivo[i] == NULL){
+            printf("ERRO!! -- Impossível abrir arquivo %d",i);
             return 3;
-        }
-    }
-
-   //espera pelo termino da threads
-   for(int i=0; i<nthreads; i++) {
-      pthread_join(*(tid+i), NULL);
+         }
+      }
+   }
+   /*INSTÂNCIANDO AS THREADS*/
+   int i = 0;
+   while(i < NUM_THREADS){
+      if (pthread_create(&tid[i],NULL,tarefa,NULL)){
+         printf("ERRO!! pthread_create()\n"); exit(-1);
+      }
    }
 
 
-   GET_TIME(fim)   //termina tempo de processamento
-   delta = fim - inicio;
-   printf("Tempo de processamento  (nthreads %d): %lf\n", nthreads, delta);  //consertar os prints
-   
 
 
-    GET_TIME(inicio);  //iniciar tempo de finalizacao
-   arqS = fopen(argv[5], "wb"); //tem que ver onde vai ta o arquivo que vai ser de sairda
-    if(!arqS) {
-      fprintf(stderr, "Erro de abertura do arquivo\n");
-      return 3;
-   }
-   
-   //escreve o resultado no arquivo de saida
 
-   //finaliza processos e libera espaço
-   GET_TIME(fim) //finaliza o tempo de finalizacao   
-   delta = fim - inicio;
-   printf("Tempo finalizacao:%lf\n", delta); //consertar os prints
+   /*Instância*/
+   for (int t=0; t<NTHREADS; t++) {//Término das threads
+      if (pthread_join(tid[t], NULL)) {
+         printf("--ERRO: pthread_join() \n"); exit(-1); 
+         } 
+      }
 
-   return 0;
+   return 0; //Programa foi um sucesso!!
+}
+
+double TF(int num_ocorrencias, int num_palavras){
+   //
+   double TF = num_ocorrencias/num_palavras;
+   return TF;
+}
+
+double IDF(){
+   double IDF = log(NUM_DOCUMENTS/n_docs_com_termo);
+   return IDF;
 }
