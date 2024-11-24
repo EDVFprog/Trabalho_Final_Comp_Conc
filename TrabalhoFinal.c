@@ -1,133 +1,192 @@
+// Deus seja louvado.
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
 #include <math.h>
-#include "timer.h"
 
-#define NUM_THREADS 3
 #define NUM_DOCUMENTS 3
-//#define ARCHIVE_PATH "src\\arquivo"
+#define TAMANHO_MAX_DOC 257
 
-int n_docs_com_termo = 0;  //Em quantos documentos o termo aparece.
-int palavra_pos_global = 0;//Palavra lida
-int indice_arquivo = 0;    //Qual arquivo está sendo lido. 
+#define TRUE 1
+#define FALSE 0
 
-pthread_mutex_t mutex;
+/* Estrutura para o buffer compartilhado */
+typedef struct {
+    char buffer[TAMANHO_MAX_DOC];
+    int doc_id;
+    int ocupado; // Flag para indicar se o buffer está ocupado
+} BufferCompartilhado;
 
-// FUNÇÕES AUXILIARES NO NOSSO TRABALHO
+/* Variáveis globais */
+BufferCompartilhado buffer_compartilhado;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond_producer = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_consumer = PTHREAD_COND_INITIALIZER;
+
+const char *documentos[NUM_DOCUMENTS] = {"doc1.txt", "doc2.txt", "doc3.txt"};
+const char *termo;
+
+/* Resultados globais */
+int n_ocorrencias_termo[NUM_DOCUMENTS] = {0};
+int n_palavras_doc[NUM_DOCUMENTS] = {0};
+int num_docs_contendo_termo = 0;
+
+/* Funções principais */
 double TF(int num_ocorrencias, int num_palavras);
-double IDF();
+double IDF(int num_docs_contendo_termo);
+int leitor_arquivo(const char *fonte, char buffer[]);
+void esvaziar_buffer(char buffer[]);
+void identificar(const char buffer[], const char termo[], int *n_ocorrencias_termo, int *n_palavras_doc, int *termo_encontrado_no_doc);
 
-/*
-typedef struct{
-   int id;
-}tArgs;
-*/
-void *tarefa(void *arg) {
-    char buffer[256]; // Nenhuma linha é maior que 256 caracteres
+/* Threads */
+void *produtor(void *arg);
+void *consumidor(void *arg);
 
-    while (1) {
+int main(int argc, char *argv[]) {
+   if (argc != 2) {
+      printf("Uso: %s <termo>\n", argv[0]);
+      return 1;
+   }
+
+   termo = argv[1];
+   pthread_t thread_produtor, thread_consumidor;
+
+   buffer_compartilhado.ocupado = FALSE;
+
+   FILE *output;
+
+    /* Criação das threads */
+   pthread_create(&thread_produtor, NULL, produtor, NULL);
+   pthread_create(&thread_consumidor, NULL, consumidor, NULL);
+
+    /* Aguardar as threads terminarem */
+   pthread_join(thread_produtor, NULL);
+   pthread_join(thread_consumidor, NULL);
+
+    /* Cálculo e exibição dos resultados */
+    /*
+    printf("Termo: %s\n", termo);
+    printf("Resultados:\n");
+    for (int i = 0; i < NUM_DOCUMENTS; i++) {
+        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
+        printf("Documento %d: TF = %.4f\n", i + 1, tf);
+    }
+    double idf = IDF(num_docs_contendo_termo);
+    printf("IDF: %.4f\n", idf);
+   */
+   output = fopen("output.txt", "w");
+
+   if(output == NULL){
+      printf("ERRO NA CONSTRUÇÃO DO OUTPUT\n");
+      return 404;
+   }
+   for (int i = 0; i < NUM_DOCUMENTS; i++) {
+        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
+        fprintf(output,"Documento %d: TF = %.4f\n", i + 1, tf);
+    }
+    double idf = IDF(num_docs_contendo_termo);
+    fprintf(output,"IDF: %.4f\n", idf);
+
+    fclose(output);
+   return 0;
+}
+
+double TF(int num_ocorrencias, int num_palavras) {
+    return (double) num_ocorrencias / num_palavras;
+}
+
+double IDF(int num_docs_contendo_termo) {
+    return log((double) NUM_DOCUMENTS / num_docs_contendo_termo);
+}
+
+int leitor_arquivo(const char *fonte, char buffer[]) {
+    FILE *arquivo = fopen(fonte, "r");
+    if (arquivo == NULL) {
+        printf("ERRO!!! -- Não foi possível abrir o arquivo: %s\n", fonte);
+        return 1;
+    }
+    int i = 0, character;
+    while ((character = fgetc(arquivo)) != EOF) {
+        buffer[i++] = (char) character;
+        if (i >= TAMANHO_MAX_DOC - 1) break; // Evita buffer overflow
+    }
+    buffer[i] = '\0';
+    fclose(arquivo);
+    return 0;
+}
+
+void esvaziar_buffer(char buffer[]) {
+    for (int i = 0; i < TAMANHO_MAX_DOC; i++) {
+        buffer[i] = '\0';
+    }
+}
+
+void identificar(const char buffer[], const char termo[], int *n_ocorrencias_termo, int *n_palavras_doc, int *termo_encontrado_no_doc) {
+    int termo_presente_no_doc = FALSE;
+    const char *p = buffer;
+
+    while (*p != '\0') {
+        // Ignora espaços e quebras de linha
+        while (*p == ' ' || *p == '\n') p++; 
+        if (*p == '\0') break;
+
+        // Localiza o início da palavra
+        const char *inicio_palavra = p;
+
+        // Avança até o final da palavra
+        while (*p != ' ' && *p != '\n' && *p != '\0') p++;
+
+        // Atualiza a contagem de palavras
+        (*n_palavras_doc)++;
+
+        // Verifica se a palavra é o termo procurado
+        if (strncmp(inicio_palavra, termo, p - inicio_palavra) == 0 && (p - inicio_palavra) == strlen(termo)) {
+            (*n_ocorrencias_termo)++;
+            termo_presente_no_doc = TRUE;
+        }
+    }
+
+    // Atualiza se o termo foi encontrado no documento
+    *termo_encontrado_no_doc += termo_presente_no_doc;
+}
+
+void *produtor(void *arg) {
+    for (int i = 0; i < NUM_DOCUMENTS; i++) {
         pthread_mutex_lock(&mutex);
-        int indice_local = indice_arquivo++; // Cada thread obtém um índice único
-        pthread_mutex_unlock(&mutex);
-
-        if (fseek(arquivo, indice_local * TAMANHO_LINHA, SEEK_SET) != 0) {
-            // Se o deslocamento não for possível, terminamos
-            break;
+        while (buffer_compartilhado.ocupado) {
+            pthread_cond_wait(&cond_producer, &mutex);
         }
 
-        if (fgets(buffer, sizeof(buffer), arquivo) == NULL) {
-            // Verifique EOF
-            break;
+        esvaziar_buffer(buffer_compartilhado.buffer);
+        if (leitor_arquivo(documentos[i], buffer_compartilhado.buffer) != 0) {
+            printf("Erro ao processar o documento: %s\n", documentos[i]);
         }
-        
-        pthread_mutex_lock(&mutex);
-        if (indice_arquivo >= TOTAL_LINHAS) { // Condição para terminar todas as threads
-            break;
-        }
+        buffer_compartilhado.doc_id = i;
+        buffer_compartilhado.ocupado = TRUE;
+
+        pthread_cond_signal(&cond_consumer);
         pthread_mutex_unlock(&mutex);
     }
+
     return NULL;
 }
 
+void *consumidor(void *arg) {
+    for (int i = 0; i < NUM_DOCUMENTS; i++) {
+        pthread_mutex_lock(&mutex);
+        while (!buffer_compartilhado.ocupado) {
+            pthread_cond_wait(&cond_consumer, &mutex);
+        }
 
-int main(int argc, char* argv[]){
+        identificar(buffer_compartilhado.buffer, termo, &n_ocorrencias_termo[buffer_compartilhado.doc_id], &n_palavras_doc[buffer_compartilhado.doc_id], &num_docs_contendo_termo);
 
-   /*Abre os arquivos*/
-   /*Quero abrir os arquivos de duas maneiras
-   
-      - Leitura de um src
-      - Através da linha de comando.
-    */
+        buffer_compartilhado.ocupado = FALSE;
 
-    FILE *arquivo[NUM_DOCUMENTS];
-    FILE *output;
-
-    pthread_t tid[NUM_THREADS];
-
-
-    if(argc == 1){   //Abertura padrão, modo exemplo com acesso a src
-      int i = 0;
-      char nome_arquivo = ARCHIVE_PATH;
-      while(i<NUM_DOCUMENTS){
-         char caminho[50];
-         sprintf(caminho, "src\\arquivo_%d", i);
-         arquivo[i] = fopen(caminho, "r");
-
-         if(arquivo[i] == NULL){ //Caso o arquivo não abra.
-            printf("ERRO!! -- Impossível abrir arquivo_%d",i);
-            return 1;
-         }
-      }
-
-      
-
+        pthread_cond_signal(&cond_producer);
+        pthread_mutex_unlock(&mutex);
     }
-    else if(argc<5){
-      printf("Digite: %s <arquivos de entrada> <arquivo de entrada> <arquivo de entrada>  <arquivo de saída> \n", argv[0]);
-      //consertar os prints
-         return 2;
-   }
-   else{
-      int i = 0;
-      while(i<NUM_DOCUMENTS){
-         arquivo[i] = fopen(argv[i], "r");
 
-         if(arquivo[i] == NULL){
-            printf("ERRO!! -- Impossível abrir arquivo %d",i);
-            return 3;
-         }
-      }
-   }
-   /*INSTÂNCIANDO AS THREADS*/
-   int i = 0;
-   while(i < NUM_THREADS){
-      if (pthread_create(&tid[i],NULL,tarefa,NULL)){
-         printf("ERRO!! pthread_create()\n"); exit(-1);
-      }
-   }
-
-
-
-
-
-   /*Instância*/
-   for (int t=0; t<NTHREADS; t++) {//Término das threads
-      if (pthread_join(tid[t], NULL)) {
-         printf("--ERRO: pthread_join() \n"); exit(-1); 
-         } 
-      }
-
-   return 0; //Programa foi um sucesso!!
-}
-
-double TF(int num_ocorrencias, int num_palavras){
-   //
-   double TF = num_ocorrencias/num_palavras;
-   return TF;
-}
-
-double IDF(){
-   double IDF = log(NUM_DOCUMENTS/n_docs_com_termo);
-   return IDF;
+    return NULL;
 }

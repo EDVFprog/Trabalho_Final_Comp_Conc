@@ -5,6 +5,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <math.h>
+#include <ctype.h>
+#include <time.h>
+
 
 #define NUM_DOCUMENTS 3
 #define TAMANHO_MAX_DOC 257
@@ -25,13 +28,18 @@ void identificar(const char buffer[], const char termo[], int *n_ocorrencias_ter
 
 int main(int argc, char *argv[]) {
     /*Verifica se o termo foi passado*/
+    clock_t inicio, fim;
+    double tempo;
+
+    inicio = clock();
+
     if (argc != 2) {
         printf("Uso: %s <termo>\n", argv[0]);
         return 1;
     }
 
     const char *termo = argv[1];
-
+    FILE *output;
     /*Variáveis do TF-IDF*/
     int n_ocorrencias_termo[NUM_DOCUMENTS] = {0};
     int n_palavras_doc[NUM_DOCUMENTS] = {0};
@@ -39,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     /*Buffers e arquivos*/
     char buffer[TAMANHO_MAX_DOC];
-    const char *documentos[NUM_DOCUMENTS] = {"doc1.txt", "doc2.txt", "doc3.txt"};
+    const char *documentos[NUM_DOCUMENTS] = {"src\\Co-rotinas_256.txt", "src\\Multithreading_256.txt", "src\\Multiprocessamento_256.txt"};
 
     /*Processamento dos documentos*/
     for (int i = 0; i < NUM_DOCUMENTS; i++) {
@@ -53,6 +61,7 @@ int main(int argc, char *argv[]) {
     }
 
     /*Cálculo e exibição dos resultados*/
+    /*
     printf("Termo: %s\n", termo);
     printf("Resultados:\n");
     for (int i = 0; i < NUM_DOCUMENTS; i++) {
@@ -61,6 +70,26 @@ int main(int argc, char *argv[]) {
     }
     double idf = IDF(num_docs_contendo_termo);
     printf("IDF: %.4f\n", idf);
+    */
+    fim = clock();
+    tempo = ((double) (fim - inicio))/CLOCKS_PER_SEC;
+
+    output = fopen("output_sequencial.txt", "w");
+
+    if(output == NULL){
+        printf("ERRO NA CONSTRUÇÃO DO OUTPUT\n");
+        return 404;
+    }
+    for (int i = 0; i < NUM_DOCUMENTS; i++) {
+        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
+        fprintf(output,"Documento %d: TF = %.4f\n", i + 1, tf);
+    }
+    double idf = IDF(num_docs_contendo_termo);
+    fprintf(output,"IDF: %.4f\n", idf);
+    fprintf(output, "Tempo gasto: %f segundos\n", tempo);
+
+
+    fclose(output);
 
     return 0;
 }
@@ -81,7 +110,7 @@ int leitor_arquivo(const char *fonte, char buffer[]) {
     }
     int i = 0, character;
     while ((character = fgetc(arquivo)) != EOF) {
-        buffer[i++] = (char) character;
+        buffer[i++] = tolower((char) character);
         if (i >= TAMANHO_MAX_DOC - 1) break; // Evita buffer overflow
     }
     buffer[i] = '\0';
