@@ -5,6 +5,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <math.h>
+#include <ctype.h>
+#include <time.h>
+
 
 #define NUM_DOCUMENTS 3
 #define TAMANHO_MAX_DOC 257
@@ -25,7 +28,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_producer = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_consumer = PTHREAD_COND_INITIALIZER;
 
-const char *documentos[NUM_DOCUMENTS] = {"doc1.txt", "doc2.txt", "doc3.txt"};
+const char *documentos[NUM_DOCUMENTS] = {"src\\Co-rotinas_256.txt", "src\\Multithreading_256.txt", "src\\Multiprocessamento_256.txt"};
 const char *termo;
 
 /* Resultados globais */
@@ -45,25 +48,50 @@ void *produtor(void *arg);
 void *consumidor(void *arg);
 
 int main(int argc, char *argv[]) {
-   if (argc != 2) {
-      printf("Uso: %s <termo>\n", argv[0]);
-      return 1;
+    clock_t inicio, fim;
+    double tempo;
+
+    inicio = clock();
+
+
+    if (argc < 2) {
+        printf("Uso: %s <termo>\n", argv[0]);
+        return 1;
+    }
+    /*
+    else{
+      int i = 0;
+      while(i<NUM_DOCUMENTS){
+         documentos[i] = fopen(argv[i], "r");
+
+         if(arquivo[i] == NULL){
+            printf("ERRO!! -- Impossível abrir arquivo %d",i);
+            return 3;
+         }
+         i++;
+      }
    }
+*/
+    
 
-   termo = argv[1];
-   pthread_t thread_produtor, thread_consumidor;
 
-   buffer_compartilhado.ocupado = FALSE;
+    FILE *output;
+    termo = argv[1];
+    pthread_t thread_produtor, thread_consumidor;
 
-   FILE *output;
+    buffer_compartilhado.ocupado = FALSE;
 
     /* Criação das threads */
-   pthread_create(&thread_produtor, NULL, produtor, NULL);
-   pthread_create(&thread_consumidor, NULL, consumidor, NULL);
+
+    pthread_create(&thread_produtor, NULL, produtor, NULL);
+    pthread_create(&thread_consumidor, NULL, consumidor, NULL);
 
     /* Aguardar as threads terminarem */
-   pthread_join(thread_produtor, NULL);
-   pthread_join(thread_consumidor, NULL);
+    pthread_join(thread_produtor, NULL);
+    pthread_join(thread_consumidor, NULL);
+    
+    fim = clock();
+    tempo = ((double) (fim - inicio))/CLOCKS_PER_SEC;
 
     /* Cálculo e exibição dos resultados */
     /*
@@ -74,9 +102,9 @@ int main(int argc, char *argv[]) {
         printf("Documento %d: TF = %.4f\n", i + 1, tf);
     }
     double idf = IDF(num_docs_contendo_termo);
-    printf("IDF: %.4f\n", idf);
-   */
-   output = fopen("output.txt", "w");
+    printf("IDF: %.4f\n", idf);*/
+
+    output = fopen("output_concorrente.txt", "w");
 
    if(output == NULL){
       printf("ERRO NA CONSTRUÇÃO DO OUTPUT\n");
@@ -88,9 +116,12 @@ int main(int argc, char *argv[]) {
     }
     double idf = IDF(num_docs_contendo_termo);
     fprintf(output,"IDF: %.4f\n", idf);
+    fprintf(output, "Tempo gasto: %f segundos\n", tempo);
 
     fclose(output);
-   return 0;
+
+
+    return 0;
 }
 
 double TF(int num_ocorrencias, int num_palavras) {
@@ -109,7 +140,7 @@ int leitor_arquivo(const char *fonte, char buffer[]) {
     }
     int i = 0, character;
     while ((character = fgetc(arquivo)) != EOF) {
-        buffer[i++] = (char) character;
+        buffer[i++] = tolower((char) character);
         if (i >= TAMANHO_MAX_DOC - 1) break; // Evita buffer overflow
     }
     buffer[i] = '\0';
