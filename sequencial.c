@@ -1,5 +1,3 @@
-// Deus seja louvado.
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +8,7 @@
 
 
 #define NUM_DOCUMENTS 3
-#define TAMANHO_MAX_DOC 257
+#define TAMANHO_MAX_DOC 1000000 //erro estava aqui pela definição da quantidade de caracteres
 
 #define TRUE 1
 #define FALSE 0
@@ -38,7 +36,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const char *termo = argv[1];
+     char *termo = argv[1];
+ 
+ // Convertendo para lowercase
+    for (int i = 0; termo[i] != '\0'; i++) {
+        termo[i] = tolower(termo[i]);
+    }
+
     FILE *output;
     /*Variáveis do TF-IDF*/
     int n_ocorrencias_termo[NUM_DOCUMENTS] = {0};
@@ -47,7 +51,7 @@ int main(int argc, char *argv[]) {
 
     /*Buffers e arquivos*/
     char buffer[TAMANHO_MAX_DOC];
-    const char *documentos[NUM_DOCUMENTS] = {"src\\Co-rotinas_256.txt", "src\\Multithreading_256.txt", "src\\Multiprocessamento_256.txt"};
+    const char *documentos[NUM_DOCUMENTS] = {"doc1.txt", "doc2.txt", "doc3.txt"};
 
     /*Processamento dos documentos*/
     for (int i = 0; i < NUM_DOCUMENTS; i++) {
@@ -60,19 +64,7 @@ int main(int argc, char *argv[]) {
         identificar(buffer, termo, &n_ocorrencias_termo[i], &n_palavras_doc[i], &num_docs_contendo_termo);
     }
 
-    /*Cálculo e exibição dos resultados*/
-    /*
-    printf("Termo: %s\n", termo);
-    printf("Resultados:\n");
-    for (int i = 0; i < NUM_DOCUMENTS; i++) {
-        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
-        printf("Documento %d: TF = %.4f\n", i + 1, tf);
-    }
-    double idf = IDF(num_docs_contendo_termo);
-    printf("IDF: %.4f\n", idf);
-    */
-    fim = clock();
-    tempo = ((double) (fim - inicio))/CLOCKS_PER_SEC;
+  
 
     output = fopen("output_sequencial.txt", "w");
 
@@ -80,17 +72,20 @@ int main(int argc, char *argv[]) {
         printf("ERRO NA CONSTRUÇÃO DO OUTPUT\n");
         return 404;
     }
-    for (int i = 0; i < NUM_DOCUMENTS; i++) {
-        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
-        fprintf(output,"Documento %d: TF = %.4f\n", i + 1, tf);
-    }
     double idf = IDF(num_docs_contendo_termo);
     fprintf(output,"IDF: %.4f\n", idf);
+    for (int i = 0; i < NUM_DOCUMENTS; i++) {
+        double tf = TF(n_ocorrencias_termo[i], n_palavras_doc[i]);
+        double tf_idf = idf*tf;
+        fprintf(output,"Documento %d: TF = %.4f\n", i + 1, tf);
+        fprintf(output,"Documento %d: TF-IDF = %.4f\n", i + 1, tf_idf);
+    }
+   
+    fim = clock();
+    tempo = ((double) (fim - inicio))/CLOCKS_PER_SEC;
     fprintf(output, "Tempo gasto: %f segundos\n", tempo);
-
-
     fclose(output);
-
+    
     return 0;
 }
 
@@ -99,7 +94,7 @@ double TF(int num_ocorrencias, int num_palavras) {
 }
 
 double IDF(int num_docs_contendo_termo) {
-    return log((double) NUM_DOCUMENTS / num_docs_contendo_termo);
+    return log10((double) NUM_DOCUMENTS / num_docs_contendo_termo);
 }
 
 int leitor_arquivo(const char *fonte, char buffer[]) {
