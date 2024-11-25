@@ -94,7 +94,11 @@ double TF(int num_ocorrencias, int num_palavras) {
 }
 
 double IDF(int num_docs_contendo_termo) {
-    return log10((double) NUM_DOCUMENTS / num_docs_contendo_termo);
+    if (num_docs_contendo_termo==0){
+    	return 0.0;
+    }
+    else{
+    return log10((double) NUM_DOCUMENTS / num_docs_contendo_termo);}
 }
 
 int leitor_arquivo(const char *fonte, char buffer[]) {
