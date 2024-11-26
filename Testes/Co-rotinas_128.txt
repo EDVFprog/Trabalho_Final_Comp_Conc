@@ -1,0 +1,9 @@
+O conceito de co-rotinas apareceu como uma construção de linguagem de programação
+nos anos 70 com Simula, mas não é uma construção comum nas linguagens de pro-
+gramação. Como discutido em, o motivo para essa ausência foi a falta de uma visão
+uniforme do conceito, e a complexidade das primeiras implementações. Recentemente,
+entretanto, o interesse por co-rotinas tem reaparecido nas aplicações multi-tarefa, em
+linguagens de scripting, e também no contexto de adaptação dinâmica de sistemas
+distribuídos. Na adaptação dinâmica, a gerência cooperativa de tarefas implementada
+por meio de co-rotinas, garante a atomicidade das operações de adaptação sem a necessi-
+dade de mecanismos adicionais de sincronização.A gerência cooperativa entre linhas de controle distintas é considerada uma alternativa às dificuldades encontradas tanto com a gerência preemptiva, da programação multithreading, 

@@ -1,0 +1,5 @@
+No caso mais comum, o processo principal cria processos filhos, atribuindo uma subtarefa
+para cada um deles. O processo filho herda uma cópia do código e do contexto de execução do processo pai e pode seguir sua execução de forma independente. No processo pai, é possível explicitamente aguardar a finalização do processo filho. O código abaixo ilustra a criação de um processo filho usando a chamada fork em C. Nesse exemplo, depois de criado, atribui-se ao processo filho um novo programa por meio da chamada da
+função execve.
+Um cenário de uso de programação concorrente multiprocesso é na implementação de aplicações cliente/servidor. O lado servidor aguarda requisições dos clientes.
+Quando uma nova requisição é recebida, um processo filho é criado para atender essa requisição e passa a
