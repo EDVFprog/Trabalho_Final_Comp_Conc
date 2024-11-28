@@ -1,0 +1,11 @@
+IDF: 0.1761
+0 256 
+ Documento 1: TF = 0.0000
+Documento 1: TF-IDF = 0.0000
+2 256 
+ Documento 2: TF = 0.0078
+Documento 2: TF-IDF = 0.0014
+4 256 
+ Documento 3: TF = 0.0156
+Documento 3: TF-IDF = 0.0028
+Tempo gasto: 0.013036 segundos
