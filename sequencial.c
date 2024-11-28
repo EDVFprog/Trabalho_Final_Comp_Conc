@@ -1,3 +1,13 @@
+/*
+    Esta é nossa implementação sequencial do algoritmo do TF-IDF.
+    O algoritmo consiste em contar palavras em documentos, destacando termos específicos e
+    incrementando algumas métricas. O objetivo é identificar se um termo define e diferencia um documento
+    em relação a outros.
+
+    O código recebe um arquivo, Põe em um buffer e lê caracter a caracter, em busca de palavras.
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,24 +18,25 @@
 
 
 #define NUM_DOCUMENTS 3
-#define TAMANHO_MAX_DOC 1000000 //erro estava aqui pela definição da quantidade de caracteres
+#define TAMANHO_MAX_DOC 1000000
 
-#define TRUE 1
+#define TRUE 1          //Definindo somente por praticidade
 #define FALSE 0
 
-/*Funções principais*/
+//Funções do algoritmo
 double TF(int num_ocorrencias, int num_palavras);
 double IDF(int num_docs_contendo_termo);
 
-/*Funções de arquivo e buffer*/
+//manipulando a memória
 int leitor_arquivo(const char *fonte, char buffer[]);
 void esvaziar_buffer(char buffer[]);
 
-/*Funções de indentificação dos termos*/
+//Função que identifica as palavras.
 void identificar(const char buffer[], const char termo[], int *n_ocorrencias_termo, int *n_palavras_doc, int *termo_encontrado_no_doc);
 
 int main(int argc, char *argv[]) {
-    /*Verifica se o termo foi passado*/
+    
+    
     clock_t inicio, fim;
     double tempo;
 
@@ -49,11 +60,18 @@ int main(int argc, char *argv[]) {
     int n_palavras_doc[NUM_DOCUMENTS] = {0};
     int num_docs_contendo_termo = 0;
 
-    /*Buffers e arquivos*/
+    //buffer e caminhos para arquivos.
     char buffer[TAMANHO_MAX_DOC];
     const char *documentos[NUM_DOCUMENTS] = {"doc1.txt", "doc2.txt", "doc3.txt"};
 
-    /*Processamento dos documentos*/
+    //Processamento dos documento
+
+    /*
+        Nesta ordem:
+            -Esvaziamos o buffer.
+            -Enchemos o buffer lendo o arquivo.
+            -identificamos as palavras.
+    */
     for (int i = 0; i < NUM_DOCUMENTS; i++) {
         esvaziar_buffer(buffer);
         if (leitor_arquivo(documentos[i], buffer) != 0) {
@@ -65,7 +83,7 @@ int main(int argc, char *argv[]) {
     }
 
   
-
+    //Nossa saída
     output = fopen("output_sequencial.txt", "w");
 
     if(output == NULL){
@@ -89,10 +107,11 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+//Term Frequency
 double TF(int num_ocorrencias, int num_palavras) {
     return (double) num_ocorrencias / num_palavras;
 }
-
+//
 double IDF(int num_docs_contendo_termo) {
     if (num_docs_contendo_termo==0){
     	return 0.0;
@@ -100,6 +119,7 @@ double IDF(int num_docs_contendo_termo) {
     else{
     return log10((double) NUM_DOCUMENTS / num_docs_contendo_termo);}
 }
+
 
 int leitor_arquivo(const char *fonte, char buffer[]) {
     FILE *arquivo = fopen(fonte, "r");
