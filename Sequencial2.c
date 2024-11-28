@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Output
-    FILE *output = fopen("Resultados/Conc_N/output_conc_N64_co-rotinas_sequencial.txt", "w");
+    FILE *output = fopen("output_conc_N64_co-rotinas_sequencial.txt", "w");
     if (output == NULL) {
         printf("Erro ao abrir o arquivo de saída!\n");
         return 1;
