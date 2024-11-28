@@ -1,5 +1,0 @@
-Documento 1: TF = 0.0000
-Documento 2: TF = 0.0000
-Documento 3: TF = 0.0278
-IDF: 1.0986
-Tempo gasto: 0.002000 segundos
