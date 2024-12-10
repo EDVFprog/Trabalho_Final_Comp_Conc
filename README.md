@@ -9,6 +9,6 @@ gcc -o programaExemplo programaExemplo.c -Wall
 
 Já para executar, basta escrever também em seu terminal:
 
-.\programaExemplo.exe <termo>
+.\programaExemplo.exe \<termo\>
 
 Inserindo no campo do termo, a palavra discriminante do seu interesse.
